@@ -2,4 +2,6 @@ _site/
 .sass-cache/
 .jekyll-metadata
 client_id.json
-
+*.swp
+.DS_Store
+thumbs.db

@@ -1,5 +1,7 @@
 <html>
 <head>
+<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="./js/d3-timeline.js"></script>
 <script type="text/javascript">
   var tasks = [];
   var CLIENT_ID = '817036036043-hie9e6225jkthukpm8u716csgpnqk969.apps.googleusercontent.com';
@@ -62,7 +64,10 @@
   // appropriate message is printed.
   function listUpcomingEvents(calendarId) {
 
-    
+    var now = Date.now();
+    var today = new Date();
+    today.setHours(0,0,0,0);
+
     var request = gapi.client.calendar.events.list({
       'calendarId': calendarId,
       'timeMin': (new Date()).toISOString(),
@@ -85,17 +90,38 @@
           }
           var remaining = (Date.parse(when) - Date.now()) / (1000 * 60 * 60 * 24);
           appendPre(event.summary + ' (in ' + Math.floor(remaining) + ' days)');
-          /*tasks.append({
+          tasks.push({
+            'label': event.summary,
+            'times': [ {'starting_time': today, 'ending_time': Date.parse(when)}],
             'name': event.summary,
             'time': when,
             'remaining': remaining,
             'calendarEvent': event
-          });*/
+          });
         }
+        drawChart();
       } else {
         appendPre('No upcoming events found.');
       }
     });
+  }
+
+  // Draw the timeline
+  function drawChart() {
+    var width = 800;
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    var oneWeek = new Date(today.getTime() + 1000*60*60*24*7*2);
+    var chart = d3.timeline().showAxisTop().stack().tickFormat({
+      format: d3.time.format("%a"),
+      tickTime: d3.time.hours,
+      tickInterval: 24,
+      tickSize: 6
+    }).beginning(today)
+    .ending(oneWeek)
+    .showToday();
+    var svg = d3.select("#timeline1").append("svg").attr("width", width)
+      .datum(tasks).call(chart);
   }
   
   // Append a pre element to the body containing the given message
@@ -107,6 +133,36 @@
   }
 </script>
 <script src="https://apis.google.com/js/client.js?onload=checkAuth"></script>
+<style type="text/css">
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+  }
+
+  .axis text {
+    font-family: sans-serif;
+    font-size: 10px;
+  }
+
+  .timeline-label {
+    font-family: sans-serif;
+    font-size: 12px;
+  }
+
+  #timeline2 .axis {
+    transform: translate(0px, 40px);
+    -ms-transform: translate(0px, 40px);/* IE 9 */
+    -webkit-transform: translate(0px, 40px); /* Safari and Chrome */
+    -o-transform: translate(0px, 40px); /* Opera */
+    -moz-transform: translate(0px, 40px); /* Firefox */
+  }
+
+  .coloredDiv {
+    height:20px; width:20px; float:left;
+  }
+</style>
 </head>
 <body>
   <div id="authorize-div" style="display: none">
@@ -117,5 +173,8 @@
     </button>
   </div>
   <pre id="output"></pre>
+  <div>
+    <div id="timeline1"></div>
+  </div>
 </body>
 </html>
