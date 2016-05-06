@@ -1,23 +1,121 @@
-<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript">
+  var tasks = [];
+  var CLIENT_ID = '817036036043-hie9e6225jkthukpm8u716csgpnqk969.apps.googleusercontent.com';
+  var SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
 
+  // Check if current user has authorized this application.
+  function checkAuth() {
+    gapi.auth.authorize(
+      {
+      'client_id': CLIENT_ID,
+      'scope': SCOPES.join(' '),
+      'immediate':  true
+      }, handleAuthResult);
+  }
+  
+  // Handle response from authorization server.
+  function handleAuthResult(authResult) {
+    var authorizeDiv = document.getElementById('authorize-div');
+    if (authResult && !authResult.error) {
+      // Hide auth UI, then load client library.
+      authorizeDiv.style.display = 'none';
+      loadCalendarApi();
+    } else {
+      // Show auth UI, allowing the user to initiate authorization by
+      // clicking authorize button.
+      authorizeDiv.style.display = 'inline';
+    }
+  }
+  
+  // Initiate auth flow in response to user clicking authorize button.
+  function handleAuthClick(event) {
+    gapi.auth.authorize(
+      {client_id: CLIENT_ID, scope: SCOPES, immediate: false},
+      handleAuthResult);
+    return false;
+  }
+  
+  // Load Google Calendar client library. List upcoming events
+  // once client library is loaded.
+  function loadCalendarApi() {
+    gapi.client.load('calendar', 'v3', getHorizonCalendar);
+  }
+  
+  // Gets gets the Horizon Calendar
+  function getHorizonCalendar(){
+    var request = gapi.client.calendar.calendarList.list({});
+    request.execute(function(resp) {
+      var id = '';
+      for (i in resp.items) {
+        if (resp.items[i].summary === 'Horizon') {
+          id = resp.items[i].id;
+          listUpcomingEvents(id);
+        }
+      }
+    });
+  }
+  
+  // Print the summary and start datetime/date of the next ten events in
+  // the authorized user's calendar. If no events are found an
+  // appropriate message is printed.
+  function listUpcomingEvents(calendarId) {
+
+    
+    var request = gapi.client.calendar.events.list({
+      'calendarId': calendarId,
+      'timeMin': (new Date()).toISOString(),
+      'showDeleted': false,
+      'singleEvents': true,
+      'maxResults': 10,
+      'orderBy': 'startTime'
+    });
+    
+    request.execute(function(resp) {
+      var events = resp.items;
+      appendPre('Upcoming events:');
+      
+      if (events.length > 0) {
+        for (i = 0; i < events.length; ++i) {
+          var event = events[i];
+          var when = event.start.dateTime;
+          if (!when) {
+            when = event.start.date;
+          }
+          var remaining = (Date.parse(when) - Date.now()) / (1000 * 60 * 60 * 24);
+          appendPre(event.summary + ' (in ' + Math.floor(remaining) + ' days)');
+          /*tasks.append({
+            'name': event.summary,
+            'time': when,
+            'remaining': remaining,
+            'calendarEvent': event
+          });*/
+        }
+      } else {
+        appendPre('No upcoming events found.');
+      }
+    });
+  }
+  
+  // Append a pre element to the body containing the given message
+  // as its text node.
+  function appendPre(message) {
+    var pre = document.getElementById('output');
+    var textContent = document.createTextNode(message + '\n');
+    pre.appendChild(textContent);
+  }
+</script>
+<script src="https://apis.google.com/js/client.js?onload=checkAuth"></script>
+</head>
 <body>
-Initial design.
-<ul>
-<li>Bars for each task extend until due date</li>
-<li>Line marches along at current time</li>
-<li>A notion of progress and time required can be visualized</li>
-<li>Due-dates are kept as events in a special calendar</li>
-<li>Extra information is stored in the notes field of that event</li>
-<li>All information should be human-readable on the Google calendar interface</li>
-<li>Handling oauth for the API may require storage of keys - can we do it in the browser's local store?</li>
-<li>If at all possible, have no server component - do it all in the browser</ii>
-<li>Eventually have a way to edit and add tasks in the UI</li>
-<li>Tasks may want to have subparts or start dates</li>
-<li>Order and fade away tasks with the most important at the top</li>
-<li>Be responsive to screen size so I can use this on mobile and maybe even as live calendar backgrounds.</li>
-<li>Aspect ratio can determine direction. On the desktop a horizontal timeline makes sense, on mobile a vertical one is more reasonable.</li>
-<li>Have the option to block out calendar commitments (and maybe filter to working hours, etc.)</li>
-<li>Items may have constraints on when they can be worked on (i.e. only in the lab, etc.) It would not make sense to show them when they can't be worked on.</li>
-<li>Can I make the storage requirements generic enough that other synching calendar APIs can eventually be supported?</li>
-</ul>
+  <div id="authorize-div" style="display: none">
+    <span>Authorize access to Google Calendar API</span>
+    <!--Button for the user to initiate auth sequence-->
+    <button id="authorize-button" onclick="handleAuthClick(event)">
+      Authorize
+    </button>
+  </div>
+  <pre id="output"></pre>
 </body>
+</html>
