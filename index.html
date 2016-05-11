@@ -93,7 +93,7 @@
           if (Math.floor(remaining) > 1) {
             unit = 'days';
           }
-          appendPre(event.summary + ' (in ' + Math.floor(remaining) + ' ' + unit ')');
+          appendPre(event.summary + ' (in ' + Math.floor(remaining) + ' ' + unit + ')');
           tasks.push({
             'label': event.summary,
             'times': [ {'starting_time': today, 'ending_time': Date.parse(when)}],
